@@ -154,4 +154,7 @@ new_emp_ids = set(dr1["SkyMapper_ID"][(dr1_feh < -4)]).difference(known_emp_ids)
 
 new_emp_indices = np.array([np.where(dr1["SkyMapper_ID"] == eid)[0][0] for eid in list(new_emp_ids)])
 
+new_emps = dr1[new_emp_indices]
+new_emps["FeH_predicted"] = dr1_feh[new_emp_indices]
 
+new_emps.write("skymapper-ump-candidates-20171114.txt", format="ascii.fixed_width")
