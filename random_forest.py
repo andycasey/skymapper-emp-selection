@@ -2,7 +2,7 @@
 """
 Try a Random Forest to identify extremely metal-poor stars in SkyMapper.
 
-0.  Photometrically identify stars with [Fe/H] < -3 with high completeness and 
+0.  Photometrically identify stars with [Fe/H] < -4 with high completeness and 
     low contamination.
 """
 
@@ -10,12 +10,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table
-from sklearn.ensemble import (RandomForestRegressor, RandomForestClassifier)
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
 from itertools import combinations
-from astropy.table import vstack
 
 import utils
 
@@ -25,7 +23,6 @@ np.random.seed(42)
 # of the spectroscopic metallicity.
 
 DATA_PATH = "data/"
-
 
 emps_known = Table.read(
     os.path.join(DATA_PATH, "multiphot_known_EMP.final.dat"), format="ascii")
@@ -37,11 +34,10 @@ keep = catalog["QC"] * (catalog["TEFF"] > 4250) * (catalog["LOGG"] < 5)
 catalog = catalog[keep]
 catalog["FeH"] = catalog["FE_H"]
 
-#catalog = catalog[np.random.choice(len(catalog), 00)]
-
 
 # Build X data array from all permutations of colours.
-def prepare_arrays(catalogs, magnitude_labels, y_label=None, extra_label=None, dummy_value=99.99):
+def prepare_arrays(catalogs, magnitude_labels, y_label=None, extra_label=None, 
+    dummy_value=99.99):
 
     Y = []
     X = []
@@ -99,7 +95,7 @@ if not np.any(finite):
     C[:] = 1
 
 X_train, X_test, y_train, y_test, C_train, C_test = train_test_split(X, y, C,
-    train_size=0.95, random_state=42)
+    train_size=0.95)
 
 model = RandomForestRegressor()
 model.fit(X_train, y_train)
@@ -116,12 +112,11 @@ utils.common_limits(ax, (-7, 1))
 
 fig, ax = plt.subplots()
 indices = np.argsort(C_test)#[:np.isfinite(C_test).sum()]
-scat = ax.scatter(y_test[indices], model.predict(X_test)[indices], c=C_test[indices], 
-    s=1, alpha=0.75)
+scat = ax.scatter(y_test[indices], model.predict(X_test)[indices], 
+    c=C_test[indices], s=1, alpha=0.75)
 plt.colorbar(scat)
 
 utils.common_limits(ax, (-7, 1))
-
 
 
 X_test_emps, y_test_emps, C_test_emps, colors = prepare_arrays(
@@ -145,16 +140,17 @@ ax.set_xlabel(r"$[{\rm Fe/H}]_{\rm predicted}$")
 ax.set_ylabel("number of targets in SkyMapper DR1")
 
 fig.tight_layout()
-fig.savefig("dr1_rfr.png", dpi=300)
+fig.savefig("dr1-rfr.png", dpi=300)
 
 
 # Find new UMP candidates
-known_emp_ids = set(list(emps_known["SkyMapper_ID"]) + list(emps_observed["SkyMapper_ID"]))
-new_emp_ids = set(dr1["SkyMapper_ID"][(dr1_feh < -4)]).difference(known_emp_ids)
+known_ump_ids = set(list(emps_known["SkyMapper_ID"]) + list(emps_observed["SkyMapper_ID"]))
+new_ump_ids = set(dr1["SkyMapper_ID"][(dr1_feh < -4)]).difference(known_ump_ids)
 
-new_emp_indices = np.array([np.where(dr1["SkyMapper_ID"] == eid)[0][0] for eid in list(new_emp_ids)])
+new_ump_indices = np.array([np.where(dr1["SkyMapper_ID"] == eid)[0][0] for eid in list(new_ump_ids)])
 
-new_emps = dr1[new_emp_indices]
-new_emps["FeH_predicted"] = dr1_feh[new_emp_indices]
+new_ump_candidates = dr1[new_ump_indices]
+new_ump_candidates["FeH_predicted"] = dr1_feh[new_ump_indices]
 
-new_emps.write("skymapper-ump-candidates-20171114.txt", format="ascii.fixed_width")
+new_ump_candidates.write(
+    "skymapper-ump-candidates-20171114.txt", format="ascii.fixed_width")
