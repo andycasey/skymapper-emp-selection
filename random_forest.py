@@ -154,3 +154,15 @@ new_ump_candidates["FeH_predicted"] = dr1_feh[new_ump_indices]
 
 new_ump_candidates.write(
     "skymapper-ump-candidates-20171114.txt", format="ascii.fixed_width")
+
+# Write our predictions to disk.
+for column in set(dr1.dtype.names).difference(["SkyMapper_ID"]):
+    dr1.remove_column(column)
+
+dr1["[Fe/H]_predicted"] = dr1_feh
+
+dr1.write(os.path.join(DATA_PATH, "DR1_clean_predicted.fits"),
+          format="fits", overwrite=True)
+
+
+
